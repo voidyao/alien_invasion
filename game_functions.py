@@ -31,7 +31,7 @@ def check_keyup_events(event, ship):
     elif event.key == pygame.K_LEFT:
         ship.moving_left = False
 
-def check_events(ai_settings, screen, ship, bullets):
+def check_events(ai_settings, screen, stats, play_button, ship, aliens, bullets):
     """响应按键和鼠标事件"""
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -43,8 +43,29 @@ def check_events(ai_settings, screen, ship, bullets):
         elif event.type == pygame.KEYUP:
             check_keyup_events(event, ship)
 
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            check_play_button(ai_settings, screen, stats, play_button, ship, aliens, bullets, mouse_x, mouse_y)
 
-def update_screen(ai_settings, screen, ship, aliens, bullets):
+def check_play_button(ai_settings, screen, stats, play_button, ship, aliens, bullets, mouse_x, mouse_y):
+    """在玩家单击play按钮式开始游戏"""
+    button_clicked = play_button.rect.collidepoint(mouse_x, mouse_y)
+    if button_clicked and not stats.game_active:
+        #重置游戏统计信息
+        stats.reset_stats()
+        stats.game_active = True
+
+        #清空外星人列表和子弹列表
+        aliens.empty()
+        bullets.empty()
+
+        #创建一群新的外星人，并让飞船居中
+        create_fleet(ai_settings, screen, ship, aliens)
+        ship.center_ship()
+
+
+
+def update_screen(ai_settings, screen, stats, ship, aliens, bullets, play_button):
     """更新屏幕上的图像，并切换到新屏幕"""
     #每次循环时都重绘屏幕
     screen.fill(ai_settings.bg_color)
@@ -54,6 +75,10 @@ def update_screen(ai_settings, screen, ship, aliens, bullets):
     ship.blitme()
     # alien.blitme()
     aliens.draw(screen)
+
+    #如果有些处于非活动状态，就绘制play按钮
+    if not stats.game_active:
+        play_button.draw_button()
 
     #让最近绘制的屏幕可见
     pygame.display.flip()
@@ -134,19 +159,23 @@ def change_fleet_direction(ai_settings, aliens):
 
 def ship_hit(ai_settings, stats, screen, ship, aliens, bullets):
     """响应被外星人撞到的飞船"""
-    #将ships_left减1
-    stats.ships_left -=1
+    if stats.ships_left >0:
+        #将ships_left减1
+        stats.ships_left -=1
 
-    #清空外星人列表和子弹列表
-    aliens.empty()
-    bullets.empty()
+        #清空外星人列表和子弹列表
+        aliens.empty()
+        bullets.empty()
 
-    #创建一群新的外星人，并将飞船放到屏幕底端中央
-    create_fleet(ai_settings, screen, ship, aliens)
-    ship.center_ship()
+        #创建一群新的外星人，并将飞船放到屏幕底端中央
+        create_fleet(ai_settings, screen, ship, aliens)
+        ship.center_ship()
 
-    #暂停
-    sleep(0.5)
+        #暂停
+        sleep(0.5)
+
+    else:
+        stats.game_active = False
 
 def update_aliens(ai_settins, stats, screen, ship, aliens, bullets):
     """更新外星人群中所有外星人的位置"""
